@@ -12,16 +12,18 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22 # Updated for Capacitor 8.2.0
           
       - name: Install Dependencies
         run: npm install
 
       - name: Build Web Assets
-        run: npm run build # Note: Ensure you have a 'build' script in package.json
+        run: npm run build
 
-      - name: Capacitor Sync
-        run: npx cap sync android
+      - name: Initialize & Sync Android
+        run: |
+          npx cap add android || echo "Android platform already exists"
+          npx cap sync android
 
       - name: Build Android APK
         run: |
@@ -35,7 +37,7 @@ jobs:
           name: ash-band-android-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
-  # --- iOS BUILD (Runs on a Virtual Mac) ---
+  # --- iOS BUILD ---
   build-ios:
     runs-on: macos-latest
     steps:
@@ -43,13 +45,14 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22 # Updated for Capacitor 8.2.0
 
       - name: Install Dependencies
         run: npm install
 
-      - name: Capacitor Sync
+      - name: Initialize & Sync iOS
         run: |
+          npx cap add ios || echo "iOS platform already exists"
           npx cap sync ios
 
       - name: Build iOS App (Unsigned)
