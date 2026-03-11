@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ASH-BAND</string>
+    <string name="title_activity_main">ASH-BAND</string>
+    <string name="package_name">com.saadpie.ashband</string>
+    <string name="custom_url_scheme">com.saadpie.ashband</string>
+</resources>

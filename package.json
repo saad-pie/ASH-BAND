@@ -1,0 +1,16 @@
+{
+  "name": "ash-band",
+  "version": "1.0.0",
+  "description": "AI Orchestrator Wearable Interface",
+  "main": "index.js",
+  "scripts": {
+    "build": "mkdir -p public",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/ios": "^8.2.0"
+  }
+}

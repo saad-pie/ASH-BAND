@@ -1,0 +1,67 @@
+name: Build ASH-BAND Mobile Apps
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  # --- ANDROID BUILD ---
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Web Assets
+        run: npm run build # Note: Ensure you have a 'build' script in package.json
+
+      - name: Capacitor Sync
+        run: npx cap sync android
+
+      - name: Build Android APK
+        run: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ash-band-android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  # --- iOS BUILD (Runs on a Virtual Mac) ---
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Capacitor Sync
+        run: |
+          npx cap sync ios
+
+      - name: Build iOS App (Unsigned)
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace \
+                     -scheme App \
+                     -configuration Debug \
+                     -sdk iphoneos \
+                     CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload iOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ash-band-ios-build
+          path: ios/App/
