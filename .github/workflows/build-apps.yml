@@ -74,7 +74,9 @@ jobs:
           if [ ! -d "ios" ]; then
             npx cap add ios
           fi
+          # Ensure CocoaPods is present and workspace is generated
           npx cap sync ios
+          cd ios/App && pod install
 
       - name: Build iOS App (Unsigned)
         run: |
@@ -84,7 +86,8 @@ jobs:
                      -sdk iphoneos \
                      CODE_SIGNING_ALLOWED=NO \
                      CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGN_IDENTITY=""
+                     CODE_SIGN_IDENTITY="" \
+                     clean build
 
       - name: Upload iOS Build
         uses: actions/upload-artifact@v4
