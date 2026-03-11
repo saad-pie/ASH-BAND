@@ -29,7 +29,9 @@ jobs:
 
       - name: Initialize & Sync Android
         run: |
-          npx cap add android || echo "Android platform already exists"
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
           npx cap sync android
 
       - name: Build Android APK
@@ -50,7 +52,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      # iOS also benefits from the same Java/Node versions for Capacitor sync
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -70,7 +71,9 @@ jobs:
 
       - name: Initialize & Sync iOS
         run: |
-          npx cap add ios
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
           npx cap sync ios
 
       - name: Build iOS App (Unsigned)
