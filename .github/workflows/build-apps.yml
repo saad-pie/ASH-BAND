@@ -9,6 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -42,6 +49,14 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      
+      # iOS also benefits from the same Java/Node versions for Capacitor sync
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -54,7 +69,6 @@ jobs:
         run: npm run build
 
       - name: Initialize & Sync iOS
-        # This creates the ios/ folder on the GitHub Mac runner
         run: |
           npx cap add ios
           npx cap sync ios
