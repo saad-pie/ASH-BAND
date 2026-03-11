@@ -12,7 +12,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22 # Updated for Capacitor 8.2.0
+          node-version: 22 
           
       - name: Install Dependencies
         run: npm install
@@ -45,14 +45,18 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22 # Updated for Capacitor 8.2.0
+          node-version: 22
 
       - name: Install Dependencies
         run: npm install
 
+      - name: Build Web Assets
+        run: npm run build
+
       - name: Initialize & Sync iOS
+        # This creates the ios/ folder on the GitHub Mac runner
         run: |
-          npx cap add ios || echo "iOS platform already exists"
+          npx cap add ios
           npx cap sync ios
 
       - name: Build iOS App (Unsigned)
@@ -61,7 +65,9 @@ jobs:
                      -scheme App \
                      -configuration Debug \
                      -sdk iphoneos \
-                     CODE_SIGNING_ALLOWED=NO
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_IDENTITY=""
 
       - name: Upload iOS Build
         uses: actions/upload-artifact@v4
