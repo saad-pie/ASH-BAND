@@ -40,11 +40,25 @@ jobs:
           chmod +x ./gradlew
           ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Sign Android APK
+        id: sign_app
+        run: |
+          # 1. Decode keystore from GitHub Secrets
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+          
+          # 2. Use apksigner (built into the Ubuntu runner)
+          # This creates 'ash-band-signed.apk'
+          $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks release.keystore \
+            --ks-pass pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
+            --ks-key-alias ${{ secrets.ANDROID_KEY_ALIAS }} \
+            --out ash-band-signed.apk \
+            android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: ash-band-android-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: ash-band-android-final
+          path: ash-band-signed.apk
 
   # --- iOS BUILD (No-PC / Sideload Ready) ---
   build-ios:
@@ -78,7 +92,6 @@ jobs:
 
       - name: Build Raw iOS Binary
         run: |
-          # Building to DerivedData to get a clean .app folder
           xcodebuild -project ios/App/App.xcodeproj \
                      -scheme App \
                      -configuration Debug \
@@ -93,9 +106,7 @@ jobs:
       - name: Package for Sideloading
         run: |
           mkdir -p Payload
-          # Copying the raw .app into the Payload folder
           cp -r build/Build/Products/Debug-iphoneos/App.app Payload/
-          # Zipping it into the final .ipa
           zip -r ASH-BAND.ipa Payload
 
       - name: Upload IPA
