@@ -46,7 +46,7 @@ jobs:
           name: ash-band-android-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
-  # --- iOS BUILD (Modern SPM Version) ---
+  # --- iOS BUILD (No-PC / Sideload Ready) ---
   build-ios:
     runs-on: macos-latest
     steps:
@@ -76,22 +76,26 @@ jobs:
           fi
           npx cap sync ios
 
-      - name: Archive iOS App
+      - name: Build Raw iOS Binary
         run: |
+          # Building to DerivedData to get a clean .app folder
           xcodebuild -project ios/App/App.xcodeproj \
                      -scheme App \
                      -configuration Debug \
                      -sdk iphoneos \
-                     -archivePath $PWD/build/App.xcarchive \
-                     archive \
+                     -derivedDataPath build \
                      CODE_SIGNING_ALLOWED=NO \
                      CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGN_IDENTITY=""
+                     CODE_SIGN_IDENTITY="" \
+                     AD_HOC_CODE_SIGNING_ALLOWED=YES \
+                     clean build
 
-      - name: Create IPA (Unsigned Package)
+      - name: Package for Sideloading
         run: |
           mkdir -p Payload
-          cp -r build/App.xcarchive/Products/Applications/App.app Payload/
+          # Copying the raw .app into the Payload folder
+          cp -r build/Build/Products/Debug-iphoneos/App.app Payload/
+          # Zipping it into the final .ipa
           zip -r ASH-BAND.ipa Payload
 
       - name: Upload IPA
