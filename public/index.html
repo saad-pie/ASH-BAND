@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>ASH-BAND | AI Orchestrator</title>
 
-    <script defer src="/__/firebase/12.10.0/firebase-app-compat.js"></script>
-    <script defer src="/__/firebase/12.10.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/12.10.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/init.js?useEmulator=false"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-functions-compat.js"></script>
 
     <style>
       :root {
@@ -30,7 +29,6 @@
         overflow: hidden;
       }
 
-      /* Native App Header Area */
       header {
         margin-top: 40px;
         text-align: center;
@@ -65,7 +63,6 @@
         font-size: 0.9rem;
       }
 
-      /* AI Data Feed Area */
       #ai-terminal {
         width: 85%;
         max-width: 350px;
@@ -82,7 +79,6 @@
         color: #888;
       }
 
-      /* Interaction Button */
       .action-btn {
         background: transparent;
         border: 1px solid var(--neon-blue);
@@ -135,18 +131,29 @@
     <div id="glass-card">
       <div id="status-indicator">
         <span class="pulse"></span>
-        <span id="load">Ready for Neural Link</span>
+        <span id="load">Initializing Neural Link...</span>
       </div>
       
       <button class="action-btn" onclick="connectBluetooth()">Sync Hardware</button>
     </div>
 
-    <div id="ai-terminal" id="log">
+    <div id="ai-terminal">
       <div style="color: var(--neon-blue)">[SYSTEM READY]</div>
-      <div>> Awaiting Bluetooth connection...</div>
+      <div id="log-start">> Awaiting Bluetooth connection...</div>
     </div>
 
     <script>
+      // 1. Manual Firebase Configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyCVbQwneJ4KRqM1BD88BXZ8qhbzXd9NpGI",
+        authDomain: "ash-band.firebaseapp.com",
+        projectId: "ash-band",
+        storageBucket: "ash-band.firebasestorage.app",
+        messagingSenderId: "583584228734",
+        appId: "1:583584228734:web:356f4404fb5af242cdff2f",
+        measurementId: "G-7V6PMMBPHM"
+      };
+
       const logContainer = document.getElementById('ai-terminal');
       
       function updateLog(msg, color = '#888') {
@@ -175,11 +182,18 @@
         }
       }
 
+      // Initialize Firebase manually on Load
       document.addEventListener('DOMContentLoaded', function() {
+        const loadEl = document.querySelector('#load');
         try {
-          let app = firebase.app();
-          updateLog("Core Synced: Firebase v12.10.0", "#00f2ff");
+          if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+          }
+          loadEl.textContent = 'Core Synced: Neural Link Active';
+          updateLog("Core Synced: Firebase v10.10.0", "#00f2ff");
         } catch (e) {
+          console.error(e);
+          loadEl.textContent = 'Link Failure: Check Config';
           updateLog("Link Failure: Firebase Init Error", "#ff4444");
         }
       });
