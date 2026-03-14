@@ -59,7 +59,7 @@ jobs:
           name: ash-band-android-final
           path: ash-band-signed.apk
 
-  # --- iOS BUILD (No-PC / Sideload Ready) ---
+  # --- iOS BUILD (Pure Cloud Signing - Fixed) ---
   build-ios:
     runs-on: macos-latest
     steps:
@@ -72,8 +72,11 @@ jobs:
         run: |
           git clone https://github.com/zhlynn/zsign.git
           cd zsign
-          # Note: We build the common version which works on macOS
-          g++ *.cpp common/*.cpp -lcrypto -lminizip -O3 -o zsign
+          # Explicitly finding all .cpp files and linking OpenSSL paths for macOS
+          g++ $(find . -name "*.cpp") \
+              -I/usr/local/opt/openssl/include \
+              -L/usr/local/opt/openssl/lib \
+              -lcrypto -lminizip -O3 -o zsign
           sudo cp zsign /usr/local/bin/
 
       - name: Set up Node.js
@@ -96,6 +99,7 @@ jobs:
 
       - name: Build iOS App Bundle
         run: |
+          # Optimized Release build for ASH-BAND AI Orchestration
           xcodebuild -project ios/App/App.xcodeproj \
                      -scheme App \
                      -configuration Release \
@@ -109,11 +113,11 @@ jobs:
 
       - name: Sign IPA (No-PC Method)
         run: |
-          # Decode iOS Secrets
+          # Decode iOS Secrets from GitHub
           echo "${{ secrets.IOS_P12_BASE64 }}" | base64 -d > cert.p12
           echo "${{ secrets.IOS_PROVISION_BASE64 }}" | base64 -d > cert.mobileprovision
 
-          # Use zsign to sign the .app folder and output the .ipa
+          # Use compiled zsign to generate the signed IPA
           zsign -k cert.p12 \
                 -p ${{ secrets.IOS_P12_PASSWORD }} \
                 -m cert.mobileprovision \
