@@ -7,7 +7,6 @@ on:
     branches:
       - main
 
-# Forces GitHub Actions to use Node.js 24 for the entire workflow
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -18,10 +17,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
       
-      # Optional: If you eventually add a frontend build step (like React/Vite), 
-      # uncomment the line below to build your index.html/assets.
-      # - run: npm ci && npm run build
-
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
@@ -29,3 +24,5 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ASH_BAND }}
           channelId: live
           projectId: ash-band
+          # Tell Firebase to look inside the ASHBAND folder
+          entryPoint: .
