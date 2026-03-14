@@ -38,7 +38,7 @@
         background: var(--glass); 
         border: 1px solid rgba(0, 242, 255, 0.2);
         backdrop-filter: blur(15px);
-        padding: 2rem; 
+        padding: 1.5rem 2rem; 
         border-radius: 24px; 
         text-align: center;
         box-shadow: 0 0 30px rgba(0, 242, 255, 0.05);
@@ -79,18 +79,31 @@
         color: #888;
       }
 
+      .btn-container {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+        margin-top: 20px;
+      }
+
       .action-btn {
         background: transparent;
         border: 1px solid var(--neon-blue);
         color: var(--neon-blue);
-        padding: 15px 30px;
+        padding: 12px 10px;
         border-radius: 50px;
         font-weight: bold;
         text-transform: uppercase;
-        letter-spacing: 2px;
-        margin-top: 20px;
+        letter-spacing: 1px;
         cursor: pointer;
         transition: 0.3s;
+        flex: 1;
+        font-size: 0.7rem;
+      }
+
+      .action-btn.virtual {
+        border-color: var(--neon-pink);
+        color: var(--neon-pink);
       }
 
       .action-btn:active {
@@ -98,8 +111,13 @@
         color: var(--bg-dark);
       }
 
+      .action-btn.virtual:active {
+        background: var(--neon-pink);
+        color: white;
+      }
+
       #status-indicator {
-        margin-top: 15px;
+        margin-top: 10px;
         font-size: 0.65rem;
         text-transform: uppercase;
         color: #555;
@@ -134,16 +152,19 @@
         <span id="load">Initializing Neural Link...</span>
       </div>
       
-      <button class="action-btn" onclick="connectBluetooth()">Sync Hardware</button>
+      <div class="btn-container">
+        <button class="action-btn" onclick="connectBluetooth()">Sync Band</button>
+        <button class="action-btn virtual" onclick="startVirtualMode()">Virtual Mode</button>
+      </div>
     </div>
 
     <div id="ai-terminal">
       <div style="color: var(--neon-blue)">[SYSTEM READY]</div>
-      <div id="log-start">> Awaiting Bluetooth connection...</div>
+      <div id="log-start">> Awaiting selection...</div>
     </div>
 
     <script>
-      // 1. Manual Firebase Configuration
+      const HF_URL = "wss://saadpie1-ash-band.hf.space/audio";
       const firebaseConfig = {
         apiKey: "AIzaSyCVbQwneJ4KRqM1BD88BXZ8qhbzXd9NpGI",
         authDomain: "ash-band.firebaseapp.com",
@@ -155,6 +176,8 @@
       };
 
       const logContainer = document.getElementById('ai-terminal');
+      let socket;
+      let audioCtx;
       
       function updateLog(msg, color = '#888') {
         const div = document.createElement('div');
@@ -164,7 +187,58 @@
         logContainer.scrollTop = logContainer.scrollHeight;
       }
 
-      // Bluetooth Bridge Logic
+      // VIRTUAL MODE: Phone becomes the Band
+      async function startVirtualMode() {
+        updateLog("Initializing Virtual Orchestrator...", "#ff00ff");
+        try {
+          socket = new WebSocket(HF_URL);
+          socket.binaryType = 'arraybuffer';
+
+          socket.onopen = async () => {
+            updateLog("Cloud Link Established", "#00f2ff");
+            document.getElementById('load').textContent = "VIRTUAL_BAND_ACTIVE";
+            await initAudioStreaming();
+          };
+
+          socket.onmessage = (event) => {
+            // Logic for handling AI audio return would go here
+            updateLog("SteveAI turn detected", "#00f2ff");
+          };
+
+          socket.onerror = (e) => updateLog("Cloud Error: Check Space Status", "#ff4444");
+
+        } catch (err) {
+          updateLog("Virtual Initialization Failed", "#ff4444");
+        }
+      }
+
+      async function initAudioStreaming() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+          const source = audioCtx.createMediaStreamSource(stream);
+          const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+          source.connect(processor);
+          processor.connect(audioCtx.destination);
+
+          processor.onaudioprocess = (e) => {
+            const input = e.inputBuffer.getChannelData(0);
+            const pcm16 = new Int16Array(input.length);
+            for (let i = 0; i < input.length; i++) {
+              pcm16[i] = Math.max(-1, Math.min(1, input[i])) * 0x7FFF;
+            }
+            if (socket && socket.readyState === WebSocket.OPEN) {
+              socket.send(pcm16.buffer);
+            }
+          };
+          updateLog("Mic Active: Streaming to SteveAI...");
+        } catch (e) {
+          updateLog("Mic Permission Denied", "#ff4444");
+        }
+      }
+
+      // Bluetooth Bridge Logic (For physical Band)
       async function connectBluetooth() {
         try {
           updateLog("Scanning for ASH-BAND-ONE...");
@@ -172,29 +246,24 @@
             filters: [{ name: 'ASH-BAND-ONE' }],
             optionalServices: ['4fafc201-1fb5-459e-8fcc-c5c9c331914b']
           });
-
-          updateLog("Connecting to device...");
+          updateLog("Connecting to Hardware...", "#00f2ff");
           const server = await device.gatt.connect();
-          document.getElementById('load').textContent = "Link Active: BLE 5.0";
-          updateLog("Hardware Synced via Bluetooth!", "#ff00ff");
+          document.getElementById('load').textContent = "HARDWARE_LINK_ACTIVE";
+          updateLog("Hardware Synced!", "#ff00ff");
         } catch (e) {
-          updateLog("Connection Cancelled or Failed", "#ff4444");
+          updateLog("Hardware Link Failed", "#ff4444");
         }
       }
 
-      // Initialize Firebase manually on Load
       document.addEventListener('DOMContentLoaded', function() {
         const loadEl = document.querySelector('#load');
         try {
-          if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-          }
-          loadEl.textContent = 'Core Synced: Neural Link Active';
-          updateLog("Core Synced: Firebase v10.10.0", "#00f2ff");
+          if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+          loadEl.textContent = 'Core Synced: Link Ready';
+          updateLog("Firebase Orchestrator Online", "#00f2ff");
         } catch (e) {
-          console.error(e);
           loadEl.textContent = 'Link Failure: Check Config';
-          updateLog("Link Failure: Firebase Init Error", "#ff4444");
+          updateLog("Firebase Init Error", "#ff4444");
         }
       });
     </script>
