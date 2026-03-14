@@ -9,18 +9,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-          
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22 
-          
+          node-version: 22
+
       - name: Install Dependencies
         run: npm install
 
@@ -45,9 +45,8 @@ jobs:
         run: |
           # 1. Decode keystore from GitHub Secrets
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
-          
+
           # 2. Use apksigner (built into the Ubuntu runner)
-          # This creates 'ash-band-signed.apk'
           $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks release.keystore \
             --ks-pass pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
             --ks-key-alias ${{ secrets.ANDROID_KEY_ALIAS }} \
@@ -60,17 +59,11 @@ jobs:
           name: ash-band-android-final
           path: ash-band-signed.apk
 
-  # --- iOS BUILD (No-PC / Sideload Ready) ---
+  # --- iOS BUILD (Pure Cloud Signing) ---
   build-ios:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -90,11 +83,12 @@ jobs:
           fi
           npx cap sync ios
 
-      - name: Build Raw iOS Binary
+      - name: Build iOS App Bundle
         run: |
+          # We build for Release to ensure the AI Orchestrator is optimized
           xcodebuild -project ios/App/App.xcodeproj \
                      -scheme App \
-                     -configuration Debug \
+                     -configuration Release \
                      -sdk iphoneos \
                      -derivedDataPath build \
                      CODE_SIGNING_ALLOWED=NO \
@@ -103,14 +97,26 @@ jobs:
                      AD_HOC_CODE_SIGNING_ALLOWED=YES \
                      clean build
 
-      - name: Package for Sideloading
-        run: |
-          mkdir -p Payload
-          cp -r build/Build/Products/Debug-iphoneos/App.app Payload/
-          zip -r ASH-BAND.ipa Payload
+      - name: Install zsign
+        run: brew install zsign
 
-      - name: Upload IPA
+      - name: Sign IPA (No-PC Method)
+        run: |
+          # Decode iOS Secrets
+          echo "${{ secrets.IOS_P12_BASE64 }}" | base64 -d > cert.p12
+          echo "${{ secrets.IOS_PROVISION_BASE64 }}" | base64 -d > cert.mobileprovision
+
+          # Use zsign to sign the .app folder and output the .ipa
+          # This works without an official Apple Mac/Keychain
+          zsign -k cert.p12 \
+                -p ${{ secrets.IOS_P12_PASSWORD }} \
+                -m cert.mobileprovision \
+                -o ASH-BAND-Signed.ipa \
+                -z 9 \
+                build/Build/Products/Release-iphoneos/App.app
+
+      - name: Upload Signed IPA
         uses: actions/upload-artifact@v4
         with:
-          name: ash-band-ios-ipa
-          path: ASH-BAND.ipa
+          name: ash-band-ios-final
+          path: ASH-BAND-Signed.ipa
