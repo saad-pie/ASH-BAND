@@ -131,17 +131,22 @@ jobs:
 
       - name: Sign IPA (No-PC Method)
         run: |
-          # Decode iOS Secrets
+          # 1. Decode iOS Secrets
           echo "${{ secrets.IOS_P12_BASE64 }}" | base64 -d > cert.p12
           echo "${{ secrets.IOS_PROVISION_BASE64 }}" | base64 -d > cert.mobileprovision
 
-          # Final signing step
+          # 2. Construct Payload Directory (Mandatory for IPA packaging)
+          mkdir -p build/Payload
+          cp -R build/Build/Products/Release-iphoneos/App.app build/Payload/
+
+          # 3. Final signing and packaging step
+          # Pointing to the Payload folder ensures a valid .ipa structure
           zsign -k cert.p12 \
-                -p ${{ secrets.IOS_P12_PASSWORD }} \
+                -p "${{ secrets.IOS_P12_PASSWORD }}" \
                 -m cert.mobileprovision \
                 -o ASH-BAND-Signed.ipa \
                 -z 9 \
-                build/Build/Products/Release-iphoneos/App.app
+                build/Payload
 
       - name: Upload Signed IPA
         uses: actions/upload-artifact@v4
