@@ -66,17 +66,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Build Dependencies
-        run: brew install openssl minizip
+        run: brew install openssl minizip cmake
 
-      - name: Build zsign from Source
+      - name: Build zsign from Source (CMake Method)
         run: |
           git clone https://github.com/zhlynn/zsign.git
           cd zsign
-          # Explicitly finding all .cpp files and linking OpenSSL paths for macOS
-          g++ $(find . -name "*.cpp") \
-              -I/usr/local/opt/openssl/include \
-              -L/usr/local/opt/openssl/lib \
-              -lcrypto -lminizip -O3 -o zsign
+          mkdir build
+          cd build
+          # CMake handles all the internal include paths correctly
+          cmake ..
+          make
           sudo cp zsign /usr/local/bin/
 
       - name: Set up Node.js
@@ -99,7 +99,7 @@ jobs:
 
       - name: Build iOS App Bundle
         run: |
-          # Optimized Release build for ASH-BAND AI Orchestration
+          # Optimized Release build for ASH-BAND
           xcodebuild -project ios/App/App.xcodeproj \
                      -scheme App \
                      -configuration Release \
@@ -117,7 +117,7 @@ jobs:
           echo "${{ secrets.IOS_P12_BASE64 }}" | base64 -d > cert.p12
           echo "${{ secrets.IOS_PROVISION_BASE64 }}" | base64 -d > cert.mobileprovision
 
-          # Use compiled zsign to generate the signed IPA
+          # Use the newly compiled zsign to generate the signed IPA
           zsign -k cert.p12 \
                 -p ${{ secrets.IOS_P12_PASSWORD }} \
                 -m cert.mobileprovision \
