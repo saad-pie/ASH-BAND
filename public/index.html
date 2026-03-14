@@ -178,6 +178,7 @@
       const logContainer = document.getElementById('ai-terminal');
       let socket;
       let audioCtx;
+      let nextStartTime = 0; // For seamless audio playback scheduling
       
       function updateLog(msg, color = '#888') {
         const div = document.createElement('div');
@@ -191,6 +192,12 @@
       async function startVirtualMode() {
         updateLog("Initializing Virtual Orchestrator...", "#ff00ff");
         try {
+          // Initialize Audio Context immediately to bypass mobile autoplay blocks
+          if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+          }
+          if (audioCtx.state === 'suspended') await audioCtx.resume();
+
           socket = new WebSocket(HF_URL);
           socket.binaryType = 'arraybuffer';
 
@@ -201,8 +208,9 @@
           };
 
           socket.onmessage = (event) => {
-            // Logic for handling AI audio return would go here
-            updateLog("SteveAI turn detected", "#00f2ff");
+            if (event.data instanceof ArrayBuffer) {
+              playBinaryAudio(event.data);
+            }
           };
 
           socket.onerror = (e) => updateLog("Cloud Error: Check Space Status", "#ff4444");
@@ -212,14 +220,36 @@
         }
       }
 
+      // Playback logic: Converts raw Int16 bytes to Float32 for Web Audio
+      function playBinaryAudio(arrayBuffer) {
+        const int16Data = new Int16Array(arrayBuffer);
+        const float32Data = new Float32Array(int16Data.length);
+        
+        for (let i = 0; i < int16Data.length; i++) {
+          float32Data[i] = int16Data[i] / 32768.0; // Normalize PCM
+        }
+
+        const buffer = audioCtx.createBuffer(1, float32Data.length, 24000);
+        buffer.getChannelData(0).set(float32Data);
+
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioCtx.destination);
+
+        // Schedule playback to be seamless
+        const currentTime = audioCtx.currentTime;
+        if (nextStartTime < currentTime) nextStartTime = currentTime;
+        source.start(nextStartTime);
+        nextStartTime += buffer.duration;
+      }
+
       async function initAudioStreaming() {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-          const source = audioCtx.createMediaStreamSource(stream);
+          const micSource = audioCtx.createMediaStreamSource(stream);
           const processor = audioCtx.createScriptProcessor(4096, 1, 1);
 
-          source.connect(processor);
+          micSource.connect(processor);
           processor.connect(audioCtx.destination);
 
           processor.onaudioprocess = (e) => {
