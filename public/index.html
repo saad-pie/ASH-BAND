@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>ASH-BAND | AI Orchestrator</title>
 
     <script defer src="/__/firebase/12.10.0/firebase-app-compat.js"></script>
@@ -15,36 +15,43 @@
         --neon-blue: #00f2ff;
         --neon-pink: #ff00ff;
         --bg-dark: #050505;
+        --glass: rgba(255, 255, 255, 0.03);
       }
 
       body { 
         background: var(--bg-dark); 
         color: var(--neon-blue); 
-        font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; 
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
         margin: 0; 
         display: flex; 
         flex-direction: column;
-        justify-content: center; 
         align-items: center; 
         height: 100vh;
         overflow: hidden;
       }
 
+      /* Native App Header Area */
+      header {
+        margin-top: 40px;
+        text-align: center;
+      }
+
       #glass-card { 
-        background: rgba(255, 255, 255, 0.03); 
+        background: var(--glass); 
         border: 1px solid rgba(0, 242, 255, 0.2);
         backdrop-filter: blur(15px);
-        padding: 3rem; 
-        border-radius: 20px; 
+        padding: 2rem; 
+        border-radius: 24px; 
         text-align: center;
-        box-shadow: 0 0 40px rgba(0, 242, 255, 0.1);
-        max-width: 400px;
-        width: 80%;
+        box-shadow: 0 0 30px rgba(0, 242, 255, 0.05);
+        max-width: 350px;
+        width: 85%;
+        margin-top: 20px;
       }
 
       h1 { 
-        font-size: 2.5rem; 
-        letter-spacing: 0.5rem; 
+        font-size: 2.2rem; 
+        letter-spacing: 0.4rem; 
         margin: 0; 
         text-transform: uppercase;
         filter: drop-shadow(0 0 8px var(--neon-blue));
@@ -54,57 +61,126 @@
         color: var(--neon-pink); 
         font-family: 'Courier New', monospace; 
         font-weight: bold;
-        margin-top: 10px;
+        margin-top: 5px;
+        font-size: 0.9rem;
+      }
+
+      /* AI Data Feed Area */
+      #ai-terminal {
+        width: 85%;
+        max-width: 350px;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid #111;
+        border-radius: 15px;
+        margin-top: 20px;
+        padding: 15px;
+        flex-grow: 1;
+        margin-bottom: 40px;
+        overflow-y: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 0.75rem;
+        color: #888;
+      }
+
+      /* Interaction Button */
+      .action-btn {
+        background: transparent;
+        border: 1px solid var(--neon-blue);
+        color: var(--neon-blue);
+        padding: 15px 30px;
+        border-radius: 50px;
+        font-weight: bold;
+        text-transform: uppercase;
         letter-spacing: 2px;
+        margin-top: 20px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+
+      .action-btn:active {
+        background: var(--neon-blue);
+        color: var(--bg-dark);
       }
 
       #status-indicator {
-        margin-top: 30px;
-        font-size: 0.7rem;
+        margin-top: 15px;
+        font-size: 0.65rem;
         text-transform: uppercase;
-        color: #444;
-        letter-spacing: 1px;
+        color: #555;
       }
 
       .pulse {
         display: inline-block;
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
         background: var(--neon-blue);
         border-radius: 50%;
-        margin-right: 8px;
-        box-shadow: 0 0 10px var(--neon-blue);
+        margin-right: 5px;
         animation: pulse-animation 2s infinite;
       }
 
       @keyframes pulse-animation {
-        0% { opacity: 1; }
-        50% { opacity: 0.3; }
-        100% { opacity: 1; }
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.2; transform: scale(1.2); }
       }
     </style>
   </head>
   <body>
 
-    <div id="glass-card">
+    <header>
       <h1>ASH-BAND</h1>
-      <div class="tagline">> ORCHESTRATOR_ACTIVE</div>
-      
+      <div class="tagline">STEVE-AI ORCHESTRATOR</div>
+    </header>
+
+    <div id="glass-card">
       <div id="status-indicator">
         <span class="pulse"></span>
-        <span id="load">Initializing Neural Link...</span>
+        <span id="load">Ready for Neural Link</span>
       </div>
+      
+      <button class="action-btn" onclick="connectBluetooth()">Sync Hardware</button>
+    </div>
+
+    <div id="ai-terminal" id="log">
+      <div style="color: var(--neon-blue)">[SYSTEM READY]</div>
+      <div>> Awaiting Bluetooth connection...</div>
     </div>
 
     <script>
+      const logContainer = document.getElementById('ai-terminal');
+      
+      function updateLog(msg, color = '#888') {
+        const div = document.createElement('div');
+        div.style.color = color;
+        div.textContent = `> ${msg}`;
+        logContainer.appendChild(div);
+        logContainer.scrollTop = logContainer.scrollHeight;
+      }
+
+      // Bluetooth Bridge Logic
+      async function connectBluetooth() {
+        try {
+          updateLog("Scanning for ASH-BAND-ONE...");
+          const device = await navigator.bluetooth.requestDevice({
+            filters: [{ name: 'ASH-BAND-ONE' }],
+            optionalServices: ['4fafc201-1fb5-459e-8fcc-c5c9c331914b']
+          });
+
+          updateLog("Connecting to device...");
+          const server = await device.gatt.connect();
+          document.getElementById('load').textContent = "Link Active: BLE 5.0";
+          updateLog("Hardware Synced via Bluetooth!", "#ff00ff");
+        } catch (e) {
+          updateLog("Connection Cancelled or Failed", "#ff4444");
+        }
+      }
+
       document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
         try {
           let app = firebase.app();
-          loadEl.textContent = 'Core Synced: Firebase v12.10.0';
+          updateLog("Core Synced: Firebase v12.10.0", "#00f2ff");
         } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Link Failure: Check Console';
+          updateLog("Link Failure: Firebase Init Error", "#ff4444");
         }
       });
     </script>
